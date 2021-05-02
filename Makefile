@@ -12,21 +12,23 @@ RM      = rm -f
 MKDIR   = mkdir -p
 
 SRC  = $(wildcard src/*.c)
-COMMON_SRC = $(wildcard src/common/*.c)
-ALL_SRC = $(wildcard src/*.c src/*.h src/common/*.c src/common/*.h test/package/*.c test/cache/*.c)
+COMMON_SRC = $(wildcard src/common/*.c src/registry/*.c src/repository/*.c)
+ALL_SRC = $(wildcard src/*.c src/*.h src/common/*.c src/common/*.h src/registry/*.c src/registry/*.h src/repository/*.h src/repository/*.c test/package/*.c test/cache/*.c)
 SDEPS = $(wildcard deps/*/*.c)
 ODEPS = $(SDEPS:.c=.o)
 DEPS = $(filter-out $(ODEPS), $(SDEPS))
 OBJS = $(DEPS:.c=.o)
-MAKEFILES = $(wildcard deps/*/Makefile)
 
 export CC
 
+CFLAGS  += -std=c99 -U__STRICT_ANSI__ -Ideps -Isrc/common -Isrc/repository -Isrc/registry
+CFLAGS  += -g -Wall -Werror=return-type -Wno-unused-function -Werror=implicit-function-declaration
+
 ifdef STATIC
-	CFLAGS  += -DCURL_STATICLIB -std=c99 -Ideps -Wall -Wno-unused-function -U__STRICT_ANSI__ $(shell deps/curl/bin/curl-config --cflags)
+	CFLAGS  += -DCURL_STATICLIB $(shell deps/curl/bin/curl-config --cflags)
 	LDFLAGS += -static $(shell deps/curl/bin/curl-config --static-libs)
 else
-	CFLAGS  += -std=c99 -Ideps -Wall -Wno-unused-function -U__STRICT_ANSI__ $(shell curl-config --cflags)
+	CFLAGS  += $(shell curl-config --cflags)
 	LDFLAGS += $(shell curl-config --libs)
 endif
 
@@ -46,7 +48,7 @@ all: $(BINS)
 
 build: $(BINS)
 
-$(BINS): $(SRC) $(MAKEFILES) $(OBJS)
+$(BINS): $(SRC) $(COMMON_SRC) $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $(COMMON_SRC) src/$(@:.exe=).c $(OBJS) $(LDFLAGS)
 
 $(MAKEFILES):

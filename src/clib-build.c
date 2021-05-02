@@ -12,10 +12,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
-#include <unistd.h>
-#endif
-
 #ifdef HAVE_PTHREADS
 #include <pthread.h>
 #endif
@@ -40,18 +36,13 @@
 #include <path-join/path-join.h>
 #include <str-flatten/str-flatten.h>
 #include <trim/trim.h>
-
+#include "clib-settings.h"
 #include "version.h"
 
-#define CLIB_PACKAGE_CACHE_TIME 30 * 24 * 60 * 60
 #define PROGRAM_NAME "clib-build"
 
 #define SX(s) #s
 #define S(s) SX(s)
-
-#ifdef HAVE_PTHREADS
-#define MAX_THREADS 4
-#endif
 
 #ifndef DEFAULT_MAKE_CLEAN_TARGET
 #define DEFAULT_MAKE_CLEAN_TARGET "clean"
@@ -83,9 +74,7 @@ struct options {
 #endif
 };
 
-const char *manifest_names[] = {"clib.json", "package.json", 0};
-
-clib_package_opts_t package_opts = {0};
+clib_package_opts_t build_package_opts = {0};
 clib_package_t *root_package = 0;
 
 command_t program = {0};
@@ -205,7 +194,7 @@ int build_package_with_manifest_name(const char *dir, const char *file) {
 #ifdef DEBUG
     package = clib_package_new_from_slug(dir, 1);
 #else
-    package = clib_package_new_from_slug(dir, 0);
+    package = clib_package_new_from_slug_and_url(dir, "FIXME", 0);
 #endif
   }
 
@@ -237,8 +226,8 @@ int build_package_with_manifest_name(const char *dir, const char *file) {
     }
 
     if (root_package && root_package->prefix) {
-      package_opts.prefix = root_package->prefix;
-      clib_package_set_opts(package_opts);
+      build_package_opts.prefix = root_package->prefix;
+      clib_package_set_opts(build_package_opts);
       setenv("PREFIX", package_opts.prefix, 1);
     } else if (opts.prefix) {
       setenv("PREFIX", opts.prefix, 1);
@@ -336,7 +325,7 @@ int build_package_with_manifest_name(const char *dir, const char *file) {
       char *dep_dir = 0;
       asprintf(&slug, "%s/%s@%s", dep->author, dep->name, dep->version);
 
-      clib_package_t *dependency = clib_package_new_from_slug(slug, 0);
+      clib_package_t *dependency = clib_package_new_from_slug_and_url(slug, "FIXME", 0);
       if (opts.dir && dependency && dependency->name) {
         dep_dir = path_join(opts.dir, dependency->name);
       }
@@ -407,7 +396,7 @@ int build_package_with_manifest_name(const char *dir, const char *file) {
       char *slug = 0;
       asprintf(&slug, "%s/%s@%s", dep->author, dep->name, dep->version);
 
-      clib_package_t *dependency = clib_package_new_from_slug(slug, 0);
+      clib_package_t *dependency = clib_package_new_from_slug_and_url(slug, "FIXME", 0);
       char *dep_dir = path_join(opts.dir, dependency->name);
 
       free(slug);
@@ -678,12 +667,12 @@ int main(int argc, char **argv) {
 
   clib_cache_init(CLIB_PACKAGE_CACHE_TIME);
 
-  package_opts.skip_cache = opts.skip_cache;
-  package_opts.prefix = opts.prefix;
-  package_opts.global = opts.global;
-  package_opts.force = opts.force;
+  build_package_opts.skip_cache = opts.skip_cache;
+  build_package_opts.prefix = opts.prefix;
+  build_package_opts.global = opts.global;
+  build_package_opts.force = opts.force;
 
-  clib_package_set_opts(package_opts);
+  clib_package_set_opts(build_package_opts);
 
   if (0 == program.argc || (argc == rest_offset + rest_argc)) {
     rc = build_package(CWD);

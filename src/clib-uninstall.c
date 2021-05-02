@@ -18,6 +18,7 @@
 #include "version.h"
 #include <stdlib.h>
 #include <string.h>
+#include "clib-settings.h"
 
 #define CLIB_UNINSTALL_DEFAULT_TARGET "make uninstall"
 
@@ -25,8 +26,6 @@
     defined(__MINGW64__) || defined(__CYGWIN__)
 #define setenv(k, v, _) _putenv_s(k, v)
 #endif
-
-const char *manifest_names[] = {"clib.json", "package.json", NULL};
 
 debug_t debugger;
 
@@ -161,7 +160,7 @@ static int clib_uninstall(const char *owner, const char *name,
     goto done;
 
   logger_info("fetch", tarball);
-  if (-1 == http_get_file(tarball, tarpath)) {
+  if (-1 == http_get_file(tarball, tarpath, NULL, 0)) {
     logger_error("error", "failed to fetch tarball");
     goto done;
   }
